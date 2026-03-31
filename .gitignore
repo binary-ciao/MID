@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+
+# IDE
+.DS_Store
+.vscode/
+*.swp
+
+# Data (too large to commit)
+processed_data/
+raw_data/
+
+# Zips and logs
+*.zip
+*.log
+
+# Environment
+.env
+venv/
