@@ -14,6 +14,7 @@ eval_batch_size: 256
 k_eval: 25
 seed: 123
 eval_every: 30
+start_epoch: 61
 # Testing
 eval_at: 70
 eval_mode: False

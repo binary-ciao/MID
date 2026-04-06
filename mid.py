@@ -20,6 +20,23 @@ from utils.model_registrar import ModelRegistrar
 from utils.trajectron_hypers import get_traj_hypers
 import evaluation
 
+
+def safe_scene_augment(scene):
+    scene_aug = np.random.choice(scene.augmented)
+    scene_aug.temporal_scene_graph = scene.temporal_scene_graph
+    return scene_aug
+
+
+def restore_scene_augmentation(env):
+    if env is None or not hasattr(env, 'scenes'):
+        return env
+
+    for scene in env.scenes:
+        if hasattr(scene, 'augmented') and scene.augmented:
+            scene.aug_func = safe_scene_augment
+
+    return env
+
 class MID():
     def __init__(self, config):
         self.config = config
@@ -27,15 +44,25 @@ class MID():
         self._build()
 
     def train(self):
-        for epoch in range(1, self.config.epochs + 1):
+        start_epoch = getattr(self.config, 'start_epoch', 1)
+        if start_epoch > 1:
+            checkpoint_path = osp.join(self.model_dir, f"{self.config.dataset}_epoch{start_epoch-1}.pt")
+            print(f"Loading checkpoint from {checkpoint_path}")
+            checkpoint = torch.load(checkpoint_path, map_location="cuda")
+            self.registrar.load_models(checkpoint['encoder'])
+            self.model.load_state_dict(checkpoint['ddpm'])
+        for epoch in range(start_epoch, self.config.epochs + 1):
             self.train_dataset.augment = self.config.augment
             for node_type, data_loader in self.train_data_loader.items():
                 pbar = tqdm(data_loader, ncols=80)
-                for batch in pbar:
+                for step, batch in enumerate(pbar, start=1):
 
                     self.optimizer.zero_grad()
                     train_loss = self.model.get_loss(batch, node_type)
-                    pbar.set_description(f"Epoch {epoch}, {node_type} MSE: {train_loss.item():.2f}")
+                    desc = f"Epoch {epoch}, {node_type} MSE: {train_loss.item():.2f}"
+                    pbar.set_description(desc)
+                    if step == 1 or step % 20 == 0:
+                        print(desc, flush=True)
                     train_loss.backward()
                     self.optimizer.step()
 
@@ -244,9 +271,9 @@ class MID():
 
 
         with open(self.train_data_path, 'rb') as f:
-            self.train_env = dill.load(f, encoding='latin1')
+            self.train_env = restore_scene_augmentation(dill.load(f, encoding='latin1'))
         with open(self.eval_data_path, 'rb') as f:
-            self.eval_env = dill.load(f, encoding='latin1')
+            self.eval_env = restore_scene_augmentation(dill.load(f, encoding='latin1'))
 
     def _build_encoder(self):
         self.encoder = Trajectron(self.registrar, self.hyperparams, "cuda")
@@ -270,8 +297,7 @@ class MID():
         config = self.config
         self.train_scenes = []
 
-        with open(self.train_data_path, 'rb') as f:
-            train_env = dill.load(f, encoding='latin1')
+        train_env = self.train_env
 
         for attention_radius_override in config.override_attention_radius:
             node_type1, node_type2, attention_radius = attention_radius_override.split(' ')
@@ -308,7 +334,7 @@ class MID():
 
         if config.eval_every is not None:
             with open(self.eval_data_path, 'rb') as f:
-                self.eval_env = dill.load(f, encoding='latin1')
+                self.eval_env = restore_scene_augmentation(dill.load(f, encoding='latin1'))
 
             for attention_radius_override in config.override_attention_radius:
                 node_type1, node_type2, attention_radius = attention_radius_override.split(' ')

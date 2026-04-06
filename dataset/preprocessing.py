@@ -25,6 +25,11 @@ def collate(batch):
     elem = batch[0]
     if elem is None:
         return None
+    elif isinstance(elem, np.ndarray):
+        return torch.as_tensor(np.stack(batch), dtype=torch.float)
+    elif isinstance(elem, np.generic):
+        # Handle numpy scalars (e.g. np.int64, np.float64)
+        return torch.tensor([x.item() for x in batch])
     elif isinstance(elem, container_abcs.Sequence):
         if len(elem) == 4: # We assume those are the maps, map points, headings and patch_size
             scene_map, scene_pts, heading_angle, patch_size = zip(*batch)

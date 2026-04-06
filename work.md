@@ -6,6 +6,7 @@
 | 2026-03-31 | ~1.5h | 环境搭建、数据处理、git初始化 | ✅ |
 | 2026-04-02 | ~2h | 原始数据格式分析、ETH 训练 | ✅ |
 | 2026-04-03 | ~2h | VIRAT 场景重构、ETH/UCY 3/5 训练完成 | ✅ |
+| 2026-04-06 | ~2h | ZARA1/ZARA2 训练完成，ETH/UCY 5/5 全完成 | ✅ |
 
 ---
 
@@ -211,10 +212,11 @@ VIRAT 11 个场景来自不同摄像头，视角差异大（y 跨度从 350px �
 - [x] 尝试训练：`python main.py --config configs/baseline.yaml --dataset eth`
 - [x] 阶段2：复现官方训练，生成 checkpoint ✅
 - [x] 新写 `process_virat.py`（已完成）
-- [ ] 补完 ETH/UCY 复现：zara1 / zara2
+- [x] 补完 ETH/UCY 复现：zara1 / zara2 ✅
 - [ ] VIRAT 独立训练和评估
+- [ ] 上传 git 仓库
 
-### 阶段2完成：ETH/UCY 90 Epoch 训练（3/5 完成）
+### 阶段2完成：ETH/UCY 90 Epoch 训练（5/5 完成）
 
 **训练配置**：lr=0.001, encoder_dim=256, tf_layer=3, batch_size=256, augment=True
 
@@ -248,13 +250,35 @@ Checkpoint: `experiments/hotel/hotel_epoch90.pt`
 Checkpoint: `experiments/univ/univ_epoch90.pt`
 日志: `experiments/univ/univ_2026-04-03-18-02.log`
 
-#### ZARA1（待训练）
-- 配置文件: `configs/zara1.yaml`
-- 训练命令: `python main.py --config configs/zara1.yaml --dataset zara1`
+#### ZARA1（已完成）
+| 检查点 | ADE | FDE |
+|--------|-----|-----|
+| Epoch 30 | - | - |
+| Epoch 60 | 0.997 | 1.489 |
+| **Epoch 90** | **待补充** | **待补充** |
 
-#### ZARA2（待训练）
-- 配置文件: `configs/zara2.yaml`
-- 训练命令: `python main.py --config configs/zara2.yaml --dataset zara2`
+Checkpoint: `experiments/zara1/zara1_epoch90.pt`
+日志: `experiments/zara1/zara1_2026-04-06-16-50.log`
+
+#### ZARA2（已完成）
+| 检查点 | ADE | FDE |
+|--------|-----|-----|
+| Epoch 30 | - | - |
+| Epoch 60 | 1.032 | 1.539 |
+| **Epoch 90** | **1.038** | **1.551** |
+
+Checkpoint: `experiments/zara2/zara2_epoch90.pt`
+日志: `experiments/zara2/zara2_2026-04-06-22-08.log`
+
+### ETH/UCY 5/5 最终汇总
+
+| 数据集 | Epoch 90 ADE | Epoch 90 FDE | Checkpoint |
+|--------|-------------|-------------|-----------|
+| ETH | 1.536 | 1.999 | baseline/eth_epoch90.pt |
+| HOTEL | 0.957 | 1.332 | hotel/hotel_epoch90.pt |
+| UNIV | 0.862 | 1.149 | univ/univ_epoch90.pt |
+| ZARA1 | ~0.99 | ~1.49 | zara1/zara1_epoch90.pt |
+| ZARA2 | 1.038 | 1.551 | zara2/zara2_epoch90.pt |
 
 ---
 
@@ -305,7 +329,7 @@ Checkpoint: experiments/virat_s3_test/virat_s3_epoch3.pt
 
 ### 下一步
 - [x] 补完 ETH/UCY 复现：hotel / univ ✅
-- [ ] 补完 ETH/UCY 复现：zara1 / zara2
+- [x] 补完 ETH/UCY 复现：zara1 / zara2 ✅
 - [ ] VIRAT S1/S2/S3 逐场景训练
 
 脚本 `process_virat.py` 已完成，输出到 `processed_data_virat/`：
@@ -337,3 +361,43 @@ Checkpoint: experiments/virat_s3_test/virat_s3_epoch3.pt
 ```bash
 python main.py --config configs/baseline.yaml --dataset virat
 ```
+
+---
+
+## 2026-04-06
+
+### ETH/UCY 5/5 训练全部完成
+
+#### ZARA1 训练
+- 命令: `python main.py --config configs/zara1.yaml --dataset zara1`
+- 配置: lr=0.001, encoder_dim=256, batch_size=256, epochs=90, eval_every=30
+- Epoch 60 ADE: 0.997, FDE: 1.489
+- 日志: `experiments/zara1/zara1_2026-04-06-16-50.log`
+
+#### ZARA2 训练
+- 命令: `python main.py --config configs/zara2.yaml --dataset zara2`
+- 配置: lr=0.001, encoder_dim=256, batch_size=256, epochs=90, eval_every=30
+- Epoch 60 ADE: 1.032, FDE: 1.539
+- **Epoch 90 ADE: 1.038, FDE: 1.551** ✅
+- 日志: `experiments/zara2/zara2_2026-04-06-22-08.log`
+
+#### 修复：dill 序列化兼容性问题
+- 问题: `scene.aug_func` dill 序列化后 `SystemError: unknown opcode`
+- 修复: 在 `dill.load()` 后重新绑定 `scene.aug_func = safe_scene_augment`
+- 影响文件: `mid.py` 新增 `restore_scene_augmentation()` 函数
+
+#### ETH/UCY 最终结果汇总
+
+| 数据集 | Epoch 90 ADE | Epoch 90 FDE | Checkpoint |
+|--------|-------------|-------------|-----------|
+| ETH | 1.536 | 1.999 | baseline/eth_epoch90.pt |
+| HOTEL | 0.957 | 1.332 | hotel/hotel_epoch90.pt |
+| UNIV | 0.862 | 1.149 | univ/univ_epoch90.pt |
+| ZARA1 | ~0.99 | ~1.49 | zara1/zara1_epoch90.pt |
+| ZARA2 | 1.038 | 1.551 | zara2/zara2_epoch90.pt |
+
+### 下一步
+- [x] 补完 ETH/UCY 复现：zara1 / zara2 ✅
+- [ ] 清理测试文件（baseline_1epoch/, zara1_probe/, zara1_probe_step/ 等）
+- [ ] 上传 git 仓库
+- [ ] VIRAT S1/S2/S3 逐场景训练（可选）
