@@ -7,6 +7,8 @@
 | 2026-04-02 | ~2h | 原始数据格式分析、ETH 训练 | ✅ |
 | 2026-04-03 | ~2h | VIRAT 场景重构、ETH/UCY 3/5 训练完成 | ✅ |
 | 2026-04-06 | ~2h | ZARA1/ZARA2 训练完成，ETH/UCY 5/5 全完成 | ✅ |
+| 2026-04-07 | ~30min | VIRAT S1/S2/S3 训练完成 | ✅ |
+| 2026-04-07 | ~30min | 全量评估：ETH/UCY 5/5 + VIRAT S1/S2/S3 DDIM 采样 | ✅ |
 
 ---
 
@@ -398,6 +400,40 @@ python main.py --config configs/baseline.yaml --dataset virat
 
 ### 下一步
 - [x] 补完 ETH/UCY 复现：zara1 / zara2 ✅
-- [ ] 清理测试文件（baseline_1epoch/, zara1_probe/, zara1_probe_step/ 等）
+- [x] VIRAT S1/S2/S3 逐场景训练 ✅（2026-04-07 完成）
+- [x] 全量模型评估 ✅（2026-04-07 完成）
+- [ ] 清理测试文件（baseline_1epoch/, zara1_probe/, *_eval configs 等）
 - [ ] 上传 git 仓库
-- [ ] VIRAT S1/S2/S3 逐场景训练（可选）
+
+### VIRAT 训练结果（2026-04-07）
+
+**注意**：VIRAT 指标以**像素为单位**（标准化后），不能与 ETH/UCY 的米制 ADE/FDE 直接对比。
+
+| 场景 | ADE (像素) | FDE (像素) | 测试节点 | Checkpoint |
+|------|-----------|-----------|---------|-----------|
+| VIRAT S1 | 0.134 | 0.097 | 17 | virat_s1/virat_s1_epoch90.pt |
+| VIRAT S2 | 0.136 | 0.100 | 4 | virat_s2/virat_s2_epoch90.pt |
+| VIRAT S3 | 0.136 | 0.099 | 31 | virat_s3/virat_s3_epoch90.pt |
+
+**数据说明**：
+- VIRAT 数据以像素坐标处理（无世界坐标转换）
+- 坐标系已标准化（mean=0, std=1）
+- 评估指标为像素级 ADE/FDE
+
+### 全量评估结果（DDIM 采样，stride=20）
+
+| 数据集 | ADE | FDE | 备注 |
+|--------|-----|-----|------|
+| ETH | 0.460 | 0.796 | |
+| HOTEL | 0.163 | 0.275 | |
+| UNIV | 0.222 | 0.431 | |
+| ZARA1 | 0.216 | 0.447 | |
+| ZARA2 | 0.175 | 0.357 | |
+| VIRAT S1 | 0.012 | 0.017 | 像素单位 |
+| VIRAT S2 | 0.009 | 0.014 | 像素单位 |
+| VIRAT S3 | 0.168 | 0.155 | 像素单位 |
+
+**评估说明**：
+- DDIM 采样显著优于 DDPM（stride=20，ADE/FDE 大幅下降）
+- VIRAT S1/S2 效果极好，S3 相对较差（场景复杂度/不规则行为差异）
+- ETH/UCY 指标为米制，VIRAT 为像素制，不可直接跨数据集对比
